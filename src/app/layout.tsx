@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Playfair_Display, DM_Sans } from 'next/font/google'
 import { Toaster } from 'react-hot-toast'
 import { AuthProvider } from '@/context/AuthContext'
+import SiteShell from '@/components/layout/SiteShell'
 import './globals.css'
 
 const display = Playfair_Display({
@@ -26,7 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={`${display.variable} ${body.variable}`}>
       <body className="font-sans antialiased bg-white text-neutral-900">
         <AuthProvider>
-          {children}
+          <SiteShell>{children}</SiteShell>
           <Toaster
             position="top-right"
             toastOptions={{
