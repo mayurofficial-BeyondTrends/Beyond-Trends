@@ -5,7 +5,7 @@ import {
   onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword,
   signInWithPopup, GoogleAuthProvider, signOut, updateProfile, User as FirebaseUser
 } from 'firebase/auth'
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore/lite'
 import { auth, db } from '@/lib/firebase'
 import type { User } from '@/types'
 

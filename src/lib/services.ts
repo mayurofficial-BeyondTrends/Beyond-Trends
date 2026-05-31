@@ -2,7 +2,7 @@ import {
   collection, doc, getDocs, getDoc, addDoc, updateDoc, deleteDoc,
   query, where, orderBy, limit, startAfter, serverTimestamp,
   writeBatch, increment, Timestamp, DocumentSnapshot
-} from 'firebase/firestore'
+} from 'firebase/firestore/lite'
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage'
 import { db, storage } from './firebase'
 import type { Product, Order, User, Category, Coupon, Review } from '@/types'
