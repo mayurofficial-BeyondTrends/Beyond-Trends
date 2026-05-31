@@ -12,11 +12,16 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || process.env.VITE_FIREBASE_APP_ID,
 }
 
-if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
-  throw new Error('Missing Firebase environment variables')
+const fallbackFirebaseConfig = {
+  apiKey: firebaseConfig.apiKey || 'demo-api-key',
+  authDomain: firebaseConfig.authDomain || 'demo-project.firebaseapp.com',
+  projectId: firebaseConfig.projectId || 'demo-project',
+  storageBucket: firebaseConfig.storageBucket || 'demo-project.appspot.com',
+  messagingSenderId: firebaseConfig.messagingSenderId || '000000000000',
+  appId: firebaseConfig.appId || '1:000000000000:web:demo',
 }
 
-const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig)
+const app = getApps().length > 0 ? getApp() : initializeApp(fallbackFirebaseConfig)
 
 export const auth = getAuth(app)
 export const db = getFirestore(app)
