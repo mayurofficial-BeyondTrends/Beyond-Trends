@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { useAuth } from '@/context/AuthContext'
@@ -8,7 +8,7 @@ import { Eye, EyeOff, Chrome } from 'lucide-react'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
 
-export default function AuthPage() {
+function AuthPageContent() {
   const params = useSearchParams()
   const [tab, setTab] = useState<'signin' | 'signup'>(params.get('tab') === 'signup' ? 'signup' : 'signin')
   const [showPw, setShowPw] = useState(false)
@@ -138,5 +138,13 @@ export default function AuthPage() {
         </p>
       </div>
     </div>
+  )
+}
+
+export default function AuthPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-neutral-50" />}>
+      <AuthPageContent />
+    </Suspense>
   )
 }

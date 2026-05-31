@@ -11,12 +11,15 @@ import type { Product, Order, User, Category, Coupon, Review } from '@/types'
 
 const toDate = (v: any) => v instanceof Timestamp ? v.toDate() : new Date(v ?? Date.now())
 
-const fromDoc = <T>(snap: DocumentSnapshot): T & { id: string } => ({
-  id: snap.id,
-  ...snap.data(),
-  createdAt: toDate(snap.data()?.createdAt),
-  updatedAt: toDate(snap.data()?.updatedAt),
-} as T & { id: string })
+const fromDoc = <T>(snap: DocumentSnapshot): T & { id: string } => {
+  const data = snap.data() || {}
+  return {
+    ...data,
+    id: snap.id,
+    createdAt: toDate((data as any).createdAt),
+    updatedAt: toDate((data as any).updatedAt),
+  } as unknown as T & { id: string }
+}
 
 // ─── Products ────────────────────────────────────────────────────────────────
 

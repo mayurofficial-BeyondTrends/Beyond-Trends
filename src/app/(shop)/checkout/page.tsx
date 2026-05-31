@@ -16,7 +16,7 @@ type FormData = Address & { paymentMethod: string; notes?: string }
 
 export default function CheckoutPage() {
   const { user, profile } = useAuth()
-  const { items, subtotal, total, discount, couponCode, shipping: _s, clearCart } = useCart()
+  const { items, subtotal, total, discount, couponCode, clearCart } = useCart()
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [step, setStep] = useState<'address' | 'payment' | 'success'>('address')
