@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
-  LayoutDashboard, Package, ShoppingBag, Users, Tag, Settings,
+  LayoutDashboard, Package, ShoppingBag, Users, Tag, Settings, FolderTree,
   ChevronRight, LogOut, BarChart3
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils'
 const navItems = [
   { href: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/admin/products',  icon: Package,          label: 'Products'  },
+  { href: '/admin/categories', icon: FolderTree,      label: 'Categories' },
   { href: '/admin/orders',    icon: ShoppingBag,      label: 'Orders'    },
   { href: '/admin/customers', icon: Users,            label: 'Customers' },
   { href: '/admin/coupons',   icon: Tag,              label: 'Coupons'   },

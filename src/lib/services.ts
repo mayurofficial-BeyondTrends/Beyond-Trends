@@ -175,9 +175,11 @@ export async function setUserRole(id: string, role: 'admin' | 'customer') {
 
 export async function getReviews(productId: string) {
   const snap = await getDocs(
-    query(collection(db, 'reviews'), where('productId', '==', productId), orderBy('createdAt', 'desc'))
+    query(collection(db, 'reviews'), where('productId', '==', productId))
   )
-  return snap.docs.map(d => fromDoc<Review>(d))
+  return snap.docs
+    .map(d => fromDoc<Review>(d))
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
 }
 
 export async function createReview(data: Omit<Review, 'id' | 'createdAt'>) {
