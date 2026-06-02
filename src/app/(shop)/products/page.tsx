@@ -4,6 +4,13 @@ import ProductCard from '@/components/shop/ProductCard'
 import ProductFilters from '@/components/shop/ProductFilters'
 import ProductSort from '@/components/shop/ProductSort'
 import { SlidersHorizontal } from 'lucide-react'
+import {
+  getProductDescription,
+  getProductPrice,
+  getProductTags,
+  getProductTitle,
+  isProductFeatured,
+} from '@/lib/utils'
 
 export const revalidate = 60
 
@@ -20,19 +27,19 @@ export default async function ProductsPage({ searchParams }: { searchParams: Sea
   if (searchParams.q) {
     const q = searchParams.q.toLowerCase()
     filtered = filtered.filter((p) =>
-      p.name.toLowerCase().includes(q) ||
-      p.description.toLowerCase().includes(q) ||
-      p.tags.some((t) => t.toLowerCase().includes(q))
+      getProductTitle(p).toLowerCase().includes(q) ||
+      getProductDescription(p).toLowerCase().includes(q) ||
+      getProductTags(p).some((t) => t.toLowerCase().includes(q))
     )
   }
 
   if (searchParams.featured === 'true') {
-    filtered = filtered.filter((p) => p.featured)
+    filtered = filtered.filter((p) => isProductFeatured(p))
   }
 
-  if (searchParams.sort === 'price-asc') filtered.sort((a, b) => a.price - b.price)
-  else if (searchParams.sort === 'price-desc') filtered.sort((a, b) => b.price - a.price)
-  else if (searchParams.sort === 'name') filtered.sort((a, b) => a.name.localeCompare(b.name))
+  if (searchParams.sort === 'price-asc') filtered.sort((a, b) => getProductPrice(a) - getProductPrice(b))
+  else if (searchParams.sort === 'price-desc') filtered.sort((a, b) => getProductPrice(b) - getProductPrice(a))
+  else if (searchParams.sort === 'name') filtered.sort((a, b) => getProductTitle(a).localeCompare(getProductTitle(b)))
   else filtered.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
 
   return (

@@ -27,25 +27,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
 
+  const ensureUserDoc = async (firebaseUser: FirebaseUser) => {
+    const userRef = doc(db, 'users', firebaseUser.uid)
+    const snap = await getDoc(userRef)
+
+    if (snap.exists()) return snap
+
+    const newProfile = {
+      email: firebaseUser.email || '',
+      displayName: firebaseUser.displayName || '',
+      photoURL: firebaseUser.photoURL || '',
+      role: 'customer' as const,
+      addresses: [],
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    }
+
+    await setDoc(userRef, newProfile)
+    return await getDoc(userRef)
+  }
+
   useEffect(() => {
     return onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser)
       if (firebaseUser) {
-        const snap = await getDoc(doc(db, 'users', firebaseUser.uid))
-        if (snap.exists()) {
-          setProfile({ id: snap.id, ...snap.data() } as User)
-        } else {
-          const newProfile: any = {
-            email: firebaseUser.email,
-            displayName: firebaseUser.displayName || '',
-            photoURL: firebaseUser.photoURL || '',
-            role: 'customer',
-            addresses: [],
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
+        const fallbackProfile: User = {
+          id: firebaseUser.uid,
+          email: firebaseUser.email || '',
+          displayName: firebaseUser.displayName || '',
+          photoURL: firebaseUser.photoURL || '',
+          phone: firebaseUser.phoneNumber || undefined,
+          role: 'customer',
+          addresses: [],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }
+
+        try {
+          // Ensure auth token is fresh before Firestore rules evaluation.
+          await firebaseUser.getIdToken(true)
+
+          const snap = await ensureUserDoc(firebaseUser)
+          if (snap.exists()) {
+            setProfile({ id: snap.id, ...snap.data() } as User)
+          } else {
+            setProfile(fallbackProfile)
           }
-          await setDoc(doc(db, 'users', firebaseUser.uid), newProfile)
-          setProfile({ id: firebaseUser.uid, ...newProfile, createdAt: new Date(), updatedAt: new Date() } as User)
+        } catch (err) {
+          console.warn('Profile sync skipped (Firestore permission issue):', err)
+          setProfile(fallbackProfile)
         }
       } else {
         setProfile(null)
@@ -61,10 +91,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signUp = async (email: string, password: string, name: string) => {
     const cred = await createUserWithEmailAndPassword(auth, email, password)
     await updateProfile(cred.user, { displayName: name })
+    try {
+      await ensureUserDoc(cred.user)
+    } catch (err: any) {
+      if (err?.code !== 'permission-denied' && err?.code !== 'firestore/permission-denied') {
+        throw err
+      }
+    }
   }
 
   const signInWithGoogle = async () => {
-    await signInWithPopup(auth, new GoogleAuthProvider())
+    const cred = await signInWithPopup(auth, new GoogleAuthProvider())
+    try {
+      await ensureUserDoc(cred.user)
+    } catch (err: any) {
+      if (err?.code !== 'permission-denied' && err?.code !== 'firestore/permission-denied') {
+        throw err
+      }
+    }
   }
 
   const logout = async () => {

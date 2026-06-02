@@ -1,10 +1,11 @@
 import {
-  collection, doc, getDocs, getDoc, addDoc, updateDoc, deleteDoc,
+  collection, doc, getDocs, getDoc, addDoc, setDoc, updateDoc, deleteDoc,
   query, where, orderBy, limit, startAfter, serverTimestamp,
-  writeBatch, increment, Timestamp, DocumentSnapshot
+  Timestamp, DocumentSnapshot
 } from 'firebase/firestore/lite'
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage'
 import { db, storage } from './firebase'
+import { getProductCategory, getProductStatus, isProductFeatured, slugify } from '@/lib/utils'
 import type { Product, Order, User, Category, Coupon, Review } from '@/types'
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -21,19 +22,35 @@ const fromDoc = <T>(snap: DocumentSnapshot): T & { id: string } => {
   } as unknown as T & { id: string }
 }
 
+const matchesCategory = (product: Product, category: string) => {
+  const productCategory = getProductCategory(product)
+  return productCategory === category || slugify(productCategory) === category
+}
+
 // ─── Products ────────────────────────────────────────────────────────────────
 
 export async function getProducts(opts: {
   category?: string; status?: string; featured?: boolean; lim?: number
 } = {}) {
   const col = collection(db, 'products')
-  const constraints: any[] = [orderBy('createdAt', 'desc')]
-  if (opts.category) constraints.push(where('category', '==', opts.category))
-  if (opts.status)   constraints.push(where('status',   '==', opts.status))
-  if (opts.featured) constraints.push(where('featured', '==', true))
-  if (opts.lim)      constraints.push(limit(opts.lim))
-  const snap = await getDocs(query(col, ...constraints))
-  return snap.docs.map(d => fromDoc<Product>(d))
+  try {
+    const snap = await getDocs(query(col, orderBy('createdAt', 'desc')))
+    let rows = snap.docs.map((d) => fromDoc<Product>(d))
+    if (opts.category) rows = rows.filter((p) => matchesCategory(p, opts.category!))
+    if (opts.status) rows = rows.filter((p) => getProductStatus(p) === opts.status)
+    if (opts.featured) rows = rows.filter((p) => isProductFeatured(p))
+    if (opts.lim) rows = rows.slice(0, opts.lim)
+    return rows
+  } catch (err) {
+    const snap = await getDocs(col)
+    let rows = snap.docs.map((d) => fromDoc<Product>(d))
+    if (opts.category) rows = rows.filter((p) => matchesCategory(p, opts.category!))
+    if (opts.status) rows = rows.filter((p) => getProductStatus(p) === opts.status)
+    if (opts.featured) rows = rows.filter((p) => isProductFeatured(p))
+    rows.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+    if (opts.lim) rows = rows.slice(0, opts.lim)
+    return rows
+  }
 }
 
 export async function getProduct(id: string) {
@@ -65,8 +82,15 @@ export async function deleteProduct(id: string) {
 // ─── Categories ──────────────────────────────────────────────────────────────
 
 export async function getCategories() {
-  const snap = await getDocs(query(collection(db, 'categories'), orderBy('order', 'asc')))
-  return snap.docs.map(d => ({ id: d.id, ...d.data() } as Category))
+  try {
+    const snap = await getDocs(query(collection(db, 'categories'), orderBy('order', 'asc')))
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() } as Category))
+  } catch {
+    const snap = await getDocs(collection(db, 'categories'))
+    return snap.docs
+      .map((d) => ({ id: d.id, ...d.data() } as Category))
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+  }
 }
 
 export async function createCategory(data: Omit<Category, 'id'>) {
@@ -100,16 +124,14 @@ export async function getOrder(id: string) {
 }
 
 export async function createOrder(data: Omit<Order, 'id' | 'createdAt' | 'updatedAt'>) {
-  const batch = writeBatch(db)
-  const orderRef = doc(collection(db, 'orders'))
-  batch.set(orderRef, { ...data, createdAt: serverTimestamp(), updatedAt: serverTimestamp() })
-  // decrement stock
-  for (const item of data.items) {
-    const pRef = doc(db, 'products', item.productId)
-    batch.update(pRef, { stock: increment(-item.quantity) })
-  }
-  await batch.commit()
-  return orderRef.id
+  // Customers can create orders, but product stock updates are admin-only in rules.
+  // Keep checkout reliable by writing the order document only.
+  const ref = await addDoc(collection(db, 'orders'), {
+    ...data,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  })
+  return ref.id
 }
 
 export async function updateOrder(id: string, data: Partial<Order>) {
@@ -135,21 +157,13 @@ export async function upsertUser(id: string, data: Partial<User>) {
   if (snap.exists()) {
     await updateDoc(ref, { ...data, updatedAt: serverTimestamp() })
   } else {
-    await updateDoc(ref, {
+    await setDoc(ref, {
       ...data,
       role: 'customer',
       addresses: [],
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
-    }).catch(() =>
-      addDoc(collection(db, 'users'), {
-        ...data,
-        role: 'customer',
-        addresses: [],
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      })
-    )
+    })
   }
 }
 

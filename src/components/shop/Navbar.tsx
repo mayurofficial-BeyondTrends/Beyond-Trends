@@ -18,6 +18,7 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20)
@@ -25,7 +26,11 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  const count = itemCount()
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  const count = mounted ? itemCount() : 0
 
   const navLinks = [
     { href: '/', label: 'Home' },
@@ -101,7 +106,7 @@ export default function Navbar() {
             {/* Cart */}
             <Link href="/cart" className="relative p-2 rounded-lg text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 transition-colors">
               <ShoppingCart className="w-5 h-5" />
-              {count > 0 && (
+              {mounted && count > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-brand-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
                   {count > 9 ? '9+' : count}
                 </span>

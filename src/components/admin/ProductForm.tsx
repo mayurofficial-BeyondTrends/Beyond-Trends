@@ -1,19 +1,83 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
-import { Plus, X, Upload, ArrowLeft, Loader2 } from 'lucide-react'
-import { createProduct, updateProduct, getProduct, getCategories, uploadImage } from '@/lib/services'
-import { cn } from '@/lib/utils'
+import { ArrowLeft, Loader2, Upload, X } from 'lucide-react'
+import { createProduct, getCategories, getProduct, updateProduct, uploadImage } from '@/lib/services'
+import {
+  buildShopifyProductPayload,
+  cn,
+  emptyShopifyProduct,
+  getProductCategory,
+  getProductComparePrice,
+  getProductDescriptionHtml,
+  getProductImages,
+  getProductPrice,
+  getProductSku,
+  getProductStatus,
+  getProductStock,
+  getProductTags,
+  getProductTitle,
+  slugify,
+} from '@/lib/utils'
 import toast from 'react-hot-toast'
-import type { Product, Category } from '@/types'
+import type { Category } from '@/types'
 
 interface ProductFormData {
-  name: string; description: string; price: number; comparePrice?: number
-  category: string; sku: string; stock: number; status: 'active' | 'draft' | 'archived'
-  featured: boolean; tags: string
+  Handle: string
+  Title: string
+  'Body (HTML)': string
+  Vendor: string
+  'Standardized Product Type': string
+  'Custom Product Type': string
+  Tags: string
+  Published: string
+  'Option1 Name': string
+  'Option1 Value': string
+  'Option2 Name': string
+  'Option2 Value': string
+  'Option3 Name': string
+  'Option3 Value': string
+  'Variant SKU': string
+  'Variant Grams': string
+  'Variant Inventory Tracker': string
+  'Variant Inventory Qty': string
+  'Variant Inventory Policy': string
+  'Variant Fulfillment Service': string
+  'Variant Price': string
+  'Variant Compare At Price': string
+  'Variant Requires Shipping': string
+  'Variant Taxable': string
+  'Variant Barcode': string
+  'Image Src': string
+  'Image Position': string
+  'Image Alt Text': string
+  'Gift Card': string
+  'SEO Title': string
+  'SEO Description': string
+  'Google Shopping / Google Product Category': string
+  'Google Shopping / Gender': string
+  'Google Shopping / Age Group': string
+  'Google Shopping / MPN': string
+  'Google Shopping / AdWords Grouping': string
+  'Google Shopping / AdWords Labels': string
+  'Google Shopping / Condition': string
+  'Google Shopping / Custom Product': string
+  'Google Shopping / Custom Label 0': string
+  'Google Shopping / Custom Label 1': string
+  'Google Shopping / Custom Label 2': string
+  'Google Shopping / Custom Label 3': string
+  'Google Shopping / Custom Label 4': string
+  'Variant Image': string
+  'Variant Weight Unit': string
+  'Variant Tax Code': string
+  'Cost per item': string
+  Status: 'active' | 'draft' | 'archived'
 }
+
+const statusOptions = ['draft', 'active', 'archived'] as const
+const truthyOptions = ['TRUE', 'FALSE'] as const
 
 export default function ProductForm({ productId }: { productId?: string }) {
   const router = useRouter()
@@ -24,34 +88,49 @@ export default function ProductForm({ productId }: { productId?: string }) {
   const isEdit = !!productId
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<ProductFormData>({
-    defaultValues: { status: 'draft', featured: false, stock: 0 }
+    defaultValues: emptyShopifyProduct as ProductFormData,
   })
 
   useEffect(() => {
     getCategories().then(setCategories)
+
     if (productId && productId !== 'new') {
-      getProduct(productId).then(p => {
-        if (!p) return
+      getProduct(productId).then((product) => {
+        if (!product) return
+
+        const productImages = getProductImages(product)
         reset({
-          name: p.name, description: p.description, price: p.price,
-          comparePrice: p.comparePrice, category: p.category, sku: p.sku,
-          stock: p.stock, status: p.status, featured: p.featured,
-          tags: p.tags.join(', '),
+          ...emptyShopifyProduct,
+          ...product,
+          Handle: product.Handle || slugify(getProductTitle(product)),
+          Title: getProductTitle(product),
+          'Body (HTML)': getProductDescriptionHtml(product),
+          'Standardized Product Type': getProductCategory(product),
+          Tags: product.Tags || getProductTags(product).join(', '),
+          'Variant SKU': getProductSku(product),
+          'Variant Price': String(getProductPrice(product) || ''),
+          'Variant Compare At Price': String(getProductComparePrice(product) || ''),
+          'Variant Inventory Qty': String(getProductStock(product)),
+          'Variant Barcode': product['Variant Barcode'] || getProductSku(product),
+          'Image Src': productImages[0] || '',
+          'Image Alt Text': product['Image Alt Text'] || getProductTitle(product),
+          Status: getProductStatus(product) as ProductFormData['Status'],
         })
-        setImages(p.images)
+        setImages(productImages)
       })
     }
-  }, [productId])
+  }, [productId, reset])
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || [])
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || [])
     if (!files.length) return
+
     setUploading(true)
     try {
       const urls = await Promise.all(
-        files.map(f => uploadImage(f, `products/${Date.now()}-${f.name}`))
+        files.map((file) => uploadImage(file, `products/${Date.now()}-${file.name}`))
       )
-      setImages(prev => [...prev, ...urls])
+      setImages((prev) => [...prev, ...urls])
       toast.success('Images uploaded!')
     } catch {
       toast.error('Failed to upload images')
@@ -63,19 +142,11 @@ export default function ProductForm({ productId }: { productId?: string }) {
   const onSubmit = async (data: ProductFormData) => {
     setSaving(true)
     try {
-      const payload = {
-        name: data.name,
-        description: data.description,
-        price: Number(data.price),
-        comparePrice: data.comparePrice ? Number(data.comparePrice) : undefined,
-        category: data.category,
-        sku: data.sku,
-        stock: Number(data.stock),
-        status: data.status,
-        featured: data.featured,
-        tags: data.tags.split(',').map(t => t.trim()).filter(Boolean),
-        images,
-      }
+      const payload = buildShopifyProductPayload({
+        ...data,
+        'Image Src': images[0] || data['Image Src'].trim(),
+      })
+
       if (isEdit) {
         await updateProduct(productId, payload)
         toast.success('Product updated!')
@@ -83,6 +154,7 @@ export default function ProductForm({ productId }: { productId?: string }) {
         await createProduct(payload as any)
         toast.success('Product created!')
       }
+
       router.push('/admin/products')
     } catch {
       toast.error('Failed to save product')
@@ -101,63 +173,83 @@ export default function ProductForm({ productId }: { productId?: string }) {
           <h1 className="font-display text-2xl font-bold text-neutral-900">
             {isEdit ? 'Edit Product' : 'New Product'}
           </h1>
-          <p className="text-neutral-500 text-sm">Fill in the product details below</p>
+          <p className="text-neutral-500 text-sm">Add products in the Shopify CSV field format.</p>
         </div>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main */}
         <div className="lg:col-span-2 space-y-4">
           <div className="card p-6 space-y-4">
             <h2 className="font-semibold text-neutral-900">Basic Information</h2>
             <div>
-              <label className="label">Product Name *</label>
-              <input {...register('name', { required: 'Name is required' })} className="input" placeholder="e.g. Premium Leather Wallet" />
-              {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name.message}</p>}
+              <label className="label">Title *</label>
+              <input {...register('Title', { required: 'Title is required' })} className="input" placeholder="6187 Keyboard Cover for Computer Pc for Desktop Computer" />
+              {errors.Title && <p className="text-xs text-red-500 mt-1">{errors.Title.message}</p>}
             </div>
             <div>
-              <label className="label">Description *</label>
-              <textarea {...register('description', { required: 'Description is required' })} rows={5} className="input resize-none" placeholder="Describe the product in detail..." />
-              {errors.description && <p className="text-xs text-red-500 mt-1">{errors.description.message}</p>}
+              <label className="label">Handle</label>
+              <input {...register('Handle')} className="input font-mono" placeholder="6187-keyboard-cover-for-computer-pc-for-desktop-computer" />
+              <p className="text-xs text-neutral-400 mt-1">Leave empty to generate from the title.</p>
             </div>
             <div>
-              <label className="label">Tags</label>
-              <input {...register('tags')} className="input" placeholder="leather, wallet, premium (comma separated)" />
-              <p className="text-xs text-neutral-400 mt-1">Separate tags with commas</p>
+              <label className="label">Body (HTML) *</label>
+              <textarea {...register('Body (HTML)', { required: 'Body HTML is required' })} rows={9} className="input resize-none font-mono text-sm" placeholder="<div><strong>Product title</strong></div>..." />
+              {errors['Body (HTML)'] && <p className="text-xs text-red-500 mt-1">{errors['Body (HTML)'].message}</p>}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="label">Vendor</label>
+                <input {...register('Vendor')} className="input" placeholder="Simply Smart" />
+              </div>
+              <div>
+                <label className="label">Tags</label>
+                <input {...register('Tags')} className="input" placeholder="Computer Accessories" />
+              </div>
             </div>
           </div>
 
-          {/* Pricing */}
           <div className="card p-6 space-y-4">
             <h2 className="font-semibold text-neutral-900">Pricing</h2>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="label">Selling Price (₹) *</label>
-                <input {...register('price', { required: true, min: 0 })} type="number" className="input" placeholder="999" />
-                {errors.price && <p className="text-xs text-red-500 mt-1">Valid price required</p>}
+                <label className="label">Variant Price *</label>
+                <input {...register('Variant Price', { required: true, min: 0 })} type="number" className="input" placeholder="40" />
+                {errors['Variant Price'] && <p className="text-xs text-red-500 mt-1">Valid price required</p>}
               </div>
               <div>
-                <label className="label">Compare Price (₹)</label>
-                <input {...register('comparePrice', { min: 0 })} type="number" className="input" placeholder="1499 (shows strikethrough)" />
+                <label className="label">Variant Compare At Price</label>
+                <input {...register('Variant Compare At Price', { min: 0 })} type="number" className="input" placeholder="199" />
+              </div>
+              <div>
+                <label className="label">Cost per item</label>
+                <input {...register('Cost per item', { min: 0 })} type="number" className="input" placeholder="20" />
+              </div>
+              <div>
+                <label className="label">Variant Weight Unit</label>
+                <select {...register('Variant Weight Unit')} className="input">
+                  <option value="g">g</option>
+                  <option value="kg">kg</option>
+                  <option value="lb">lb</option>
+                  <option value="oz">oz</option>
+                </select>
               </div>
             </div>
           </div>
 
-          {/* Images */}
           <div className="card p-6 space-y-4">
             <h2 className="font-semibold text-neutral-900">Images</h2>
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-              {images.map((img, i) => (
-                <div key={i} className="relative aspect-square rounded-xl overflow-hidden group">
+              {images.map((img, index) => (
+                <div key={img} className="relative aspect-square rounded-xl overflow-hidden group">
                   <img src={img} alt="" className="w-full h-full object-cover" />
                   <button
                     type="button"
-                    onClick={() => setImages(prev => prev.filter((_, j) => j !== i))}
+                    onClick={() => setImages((prev) => prev.filter((_, i) => i !== index))}
                     className="absolute top-1.5 right-1.5 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                   >
                     <X className="w-3.5 h-3.5 text-white" />
                   </button>
-                  {i === 0 && <span className="absolute bottom-1.5 left-1.5 text-[10px] bg-black/60 text-white rounded px-1.5 py-0.5">Main</span>}
+                  {index === 0 && <span className="absolute bottom-1.5 left-1.5 text-[10px] bg-black/60 text-white rounded px-1.5 py-0.5">Image Src</span>}
                 </div>
               ))}
               <label className={cn(
@@ -165,59 +257,192 @@ export default function ProductForm({ productId }: { productId?: string }) {
                 uploading && 'opacity-50 cursor-wait'
               )}>
                 {uploading ? <Loader2 className="w-6 h-6 text-brand-400 animate-spin" /> : <Upload className="w-6 h-6 text-neutral-400" />}
-                <span className="text-xs text-neutral-500">{uploading ? 'Uploading...' : 'Add Image'}</span>
+                <span className="text-xs text-neutral-500">{uploading ? 'Uploading...' : 'Upload'}</span>
                 <input type="file" multiple accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploading} />
               </label>
             </div>
-            <p className="text-xs text-neutral-400">First image is the main product image. Max 10 images.</p>
+            <div>
+              <label className="label">Image Src</label>
+              <input {...register('Image Src')} className="input" placeholder="https://cdn.shopify.com/..." />
+              <p className="text-xs text-neutral-400 mt-1">Uploaded first image is saved here automatically.</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="label">Image Position</label>
+                <input {...register('Image Position')} className="input" placeholder="1" />
+              </div>
+              <div>
+                <label className="label">Variant Image</label>
+                <input {...register('Variant Image')} className="input" />
+              </div>
+              <div>
+                <label className="label">Image Alt Text</label>
+                <input {...register('Image Alt Text')} className="input" />
+              </div>
+            </div>
+          </div>
+
+          <div className="card p-6 space-y-4">
+            <h2 className="font-semibold text-neutral-900">SEO and Google Shopping</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="label">SEO Title</label>
+                <input {...register('SEO Title')} className="input" />
+              </div>
+              <div>
+                <label className="label">SEO Description</label>
+                <input {...register('SEO Description')} className="input" />
+              </div>
+              <div>
+                <label className="label">Google Product Category</label>
+                <input {...register('Google Shopping / Google Product Category')} className="input" />
+              </div>
+              <div>
+                <label className="label">Google Gender</label>
+                <input {...register('Google Shopping / Gender')} className="input" />
+              </div>
+              <div>
+                <label className="label">Google Age Group</label>
+                <input {...register('Google Shopping / Age Group')} className="input" />
+              </div>
+              <div>
+                <label className="label">Google MPN</label>
+                <input {...register('Google Shopping / MPN')} className="input" />
+              </div>
+              <div>
+                <label className="label">Google Condition</label>
+                <input {...register('Google Shopping / Condition')} className="input" />
+              </div>
+              <div>
+                <label className="label">Google Custom Product</label>
+                <input {...register('Google Shopping / Custom Product')} className="input" />
+              </div>
+              <div>
+                <label className="label">AdWords Grouping</label>
+                <input {...register('Google Shopping / AdWords Grouping')} className="input" />
+              </div>
+              <div>
+                <label className="label">AdWords Labels</label>
+                <input {...register('Google Shopping / AdWords Labels')} className="input" />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
+              {[0, 1, 2, 3, 4].map((number) => (
+                <div key={number}>
+                  <label className="label">Custom Label {number}</label>
+                  <input {...register(`Google Shopping / Custom Label ${number}` as keyof ProductFormData)} className="input" />
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* Sidebar */}
         <div className="space-y-4">
           <div className="card p-6 space-y-4">
             <h2 className="font-semibold text-neutral-900">Status</h2>
             <div>
-              <label className="label">Product Status</label>
-              <select {...register('status')} className="input">
-                <option value="draft">Draft</option>
-                <option value="active">Active</option>
-                <option value="archived">Archived</option>
+              <label className="label">Status</label>
+              <select {...register('Status')} className="input">
+                {statusOptions.map((status) => <option key={status} value={status}>{status}</option>)}
               </select>
             </div>
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input {...register('featured')} type="checkbox" className="w-4 h-4 rounded border-neutral-300 text-brand-500 focus:ring-brand-500" />
-              <div>
-                <p className="text-sm font-medium text-neutral-900">Featured Product</p>
-                <p className="text-xs text-neutral-500">Show on homepage</p>
-              </div>
-            </label>
+            <div>
+              <label className="label">Published</label>
+              <select {...register('Published')} className="input">
+                {truthyOptions.map((value) => <option key={value} value={value}>{value}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="label">Gift Card</label>
+              <select {...register('Gift Card')} className="input">
+                {truthyOptions.slice().reverse().map((value) => <option key={value} value={value}>{value}</option>)}
+              </select>
+            </div>
           </div>
 
           <div className="card p-6 space-y-4">
             <h2 className="font-semibold text-neutral-900">Organization</h2>
             <div>
-              <label className="label">Category *</label>
-              <select {...register('category', { required: 'Category is required' })} className="input">
+              <label className="label">Standardized Product Type *</label>
+              <select {...register('Standardized Product Type', { required: 'Product type is required' })} className="input">
                 <option value="">Select category...</option>
-                {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                {categories.map((category) => <option key={category.id} value={category.name}>{category.name}</option>)}
                 <option value="Uncategorized">Uncategorized</option>
               </select>
-              {errors.category && <p className="text-xs text-red-500 mt-1">{errors.category.message}</p>}
+              {errors['Standardized Product Type'] && <p className="text-xs text-red-500 mt-1">{errors['Standardized Product Type'].message}</p>}
             </div>
             <div>
-              <label className="label">SKU *</label>
-              <input {...register('sku', { required: 'SKU is required' })} className="input font-mono" placeholder="PROD-001" />
-              {errors.sku && <p className="text-xs text-red-500 mt-1">{errors.sku.message}</p>}
+              <label className="label">Custom Product Type</label>
+              <input {...register('Custom Product Type')} className="input" />
             </div>
+          </div>
+
+          <div className="card p-6 space-y-4">
+            <h2 className="font-semibold text-neutral-900">Options</h2>
+            {(['1', '2', '3'] as const).map((number) => (
+              <div key={number} className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label">Option{number} Name</label>
+                  <input {...register(`Option${number} Name` as keyof ProductFormData)} className="input" />
+                </div>
+                <div>
+                  <label className="label">Option{number} Value</label>
+                  <input {...register(`Option${number} Value` as keyof ProductFormData)} className="input" />
+                </div>
+              </div>
+            ))}
           </div>
 
           <div className="card p-6 space-y-4">
             <h2 className="font-semibold text-neutral-900">Inventory</h2>
             <div>
-              <label className="label">Stock Quantity *</label>
-              <input {...register('stock', { required: true, min: 0 })} type="number" className="input" placeholder="0" />
-              {errors.stock && <p className="text-xs text-red-500 mt-1">Valid stock quantity required</p>}
+              <label className="label">Variant SKU *</label>
+              <input {...register('Variant SKU', { required: 'SKU is required' })} className="input font-mono" placeholder="6187_laptop_keyboard_cover" />
+              {errors['Variant SKU'] && <p className="text-xs text-red-500 mt-1">{errors['Variant SKU'].message}</p>}
+            </div>
+            <div>
+              <label className="label">Variant Barcode</label>
+              <input {...register('Variant Barcode')} className="input font-mono" />
+            </div>
+            <div>
+              <label className="label">Variant Inventory Qty *</label>
+              <input {...register('Variant Inventory Qty', { required: true, min: 0 })} type="number" className="input" placeholder="500" />
+              {errors['Variant Inventory Qty'] && <p className="text-xs text-red-500 mt-1">Valid stock quantity required</p>}
+            </div>
+            <div>
+              <label className="label">Variant Grams</label>
+              <input {...register('Variant Grams')} type="number" className="input" placeholder="327" />
+            </div>
+            <div>
+              <label className="label">Variant Inventory Tracker</label>
+              <input {...register('Variant Inventory Tracker')} className="input" />
+            </div>
+            <div>
+              <label className="label">Variant Inventory Policy</label>
+              <select {...register('Variant Inventory Policy')} className="input">
+                <option value="deny">deny</option>
+                <option value="continue">continue</option>
+              </select>
+            </div>
+            <div>
+              <label className="label">Variant Fulfillment Service</label>
+              <input {...register('Variant Fulfillment Service')} className="input" />
+            </div>
+            <div>
+              <label className="label">Variant Requires Shipping</label>
+              <select {...register('Variant Requires Shipping')} className="input">
+                {truthyOptions.map((value) => <option key={value} value={value}>{value}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="label">Variant Taxable</label>
+              <select {...register('Variant Taxable')} className="input">
+                {truthyOptions.map((value) => <option key={value} value={value}>{value}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="label">Variant Tax Code</label>
+              <input {...register('Variant Tax Code')} className="input" />
             </div>
           </div>
 

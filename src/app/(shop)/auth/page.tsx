@@ -48,8 +48,14 @@ function AuthPageContent() {
       await signInWithGoogle()
       toast.success('Signed in with Google!')
       router.push('/')
-    } catch {
-      toast.error('Google sign-in failed')
+    } catch (err: any) {
+      const msg = err?.code === 'auth/popup-closed-by-user' ? 'Google sign-in popup was closed'
+        : err?.code === 'auth/popup-blocked' ? 'Popup blocked by browser. Allow popups and try again.'
+        : err?.code === 'auth/operation-not-allowed' ? 'Google sign-in is not enabled in Firebase Auth.'
+        : err?.code === 'auth/unauthorized-domain' ? 'This domain is not authorized for Firebase Auth.'
+        : err?.code === 'auth/invalid-api-key' ? 'Invalid Firebase API key configuration.'
+        : 'Google sign-in failed'
+      toast.error(msg)
     } finally {
       setLoading(false)
     }

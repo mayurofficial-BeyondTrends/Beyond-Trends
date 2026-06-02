@@ -20,6 +20,11 @@ const body = DM_Sans({
 export const metadata: Metadata = {
   title: { default: 'ShopLux', template: '%s | ShopLux' },
   description: 'Premium eCommerce experience',
+  icons: {
+    icon: '/icon.svg',
+    shortcut: '/icon.svg',
+    apple: '/icon.svg',
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

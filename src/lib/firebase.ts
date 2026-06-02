@@ -21,7 +21,14 @@ const fallbackFirebaseConfig = {
   appId: firebaseConfig.appId || '1:000000000000:web:demo',
 }
 
-const app = getApps().length > 0 ? getApp() : initializeApp(fallbackFirebaseConfig)
+const hasClientConfig = Boolean(firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.appId)
+const resolvedConfig = hasClientConfig ? firebaseConfig : fallbackFirebaseConfig
+
+if (typeof window !== 'undefined' && !hasClientConfig) {
+  throw new Error('Missing Firebase client configuration (NEXT_PUBLIC_FIREBASE_*)')
+}
+
+const app = getApps().length > 0 ? getApp() : initializeApp(resolvedConfig)
 
 export const auth = getAuth(app)
 export const db = getFirestore(app)
