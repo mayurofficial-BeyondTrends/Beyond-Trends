@@ -6,7 +6,6 @@ import { useCart } from '@/context/CartContext'
 import {
   cn,
   formatCurrency,
-  getProductCategory,
   getProductComparePrice,
   getProductImages,
   getProductPrice,
@@ -31,7 +30,6 @@ export default function ProductCard({ product, className }: ProductCardProps) {
   const comparePrice = getProductComparePrice(product)
   const stock = getProductStock(product)
   const sku = getProductSku(product)
-  const category = getProductCategory(product)
   const discount = comparePrice ? Math.round(((comparePrice - price) / comparePrice) * 100) : 0
 
   const handleAddToCart = (event: React.MouseEvent) => {
@@ -91,9 +89,6 @@ export default function ProductCard({ product, className }: ProductCardProps) {
         </div>
 
         <div className="p-4">
-          <p className="text-xs text-brand-500 font-medium uppercase tracking-wider mb-1">
-            {category}
-          </p>
           <h3 className="font-medium text-neutral-900 text-sm leading-snug mb-2 line-clamp-2 group-hover:text-brand-600 transition-colors">
             {title}
           </h3>

@@ -65,17 +65,14 @@ function AuthPageContent() {
     <div className="min-h-screen bg-neutral-50 flex items-center justify-center py-12 px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center gap-2 mb-6">
-            <div className="w-10 h-10 bg-brand-500 rounded-xl flex items-center justify-center">
-              <span className="text-white font-display font-bold">S</span>
-            </div>
-            <span className="font-display font-bold text-2xl text-neutral-900">ShopLux</span>
+          <Link href="/" className="inline-flex mb-6" aria-label="Beyond Trends home">
+            <img src="/Logo.png" alt="Beyond Trends" className="h-16 w-auto max-w-[260px] object-contain" />
           </Link>
           <h1 className="font-display text-2xl font-bold text-neutral-900">
             {tab === 'signin' ? 'Welcome back' : 'Create account'}
           </h1>
           <p className="text-neutral-500 text-sm mt-1">
-            {tab === 'signin' ? 'Sign in to your account' : 'Join thousands of happy shoppers'}
+            {tab === 'signin' ? 'Sign in to your account' : 'Join Beyond Trends shoppers'}
           </p>
         </div>
 

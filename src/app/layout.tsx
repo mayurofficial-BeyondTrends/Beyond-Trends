@@ -18,12 +18,12 @@ const body = DM_Sans({
 })
 
 export const metadata: Metadata = {
-  title: { default: 'ShopLux', template: '%s | ShopLux' },
-  description: 'Premium eCommerce experience',
+  title: { default: 'Beyond Trends', template: '%s | Beyond Trends' },
+  description: 'Cute. Trendy. For Every Generation and Gender.',
   icons: {
-    icon: '/icon.svg',
-    shortcut: '/icon.svg',
-    apple: '/icon.svg',
+    icon: '/favicon.png',
+    shortcut: '/favicon.png',
+    apple: '/favicon.png',
   },
 }
 

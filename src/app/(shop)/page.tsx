@@ -24,15 +24,15 @@ export default async function HomePage() {
         />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 lg:py-36">
           <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 bg-brand-500/20 border border-brand-500/30 rounded-full px-4 py-1.5 text-brand-300 text-sm mb-6">
+            <div className="inline-flex items-center gap-2 bg-brand-500/20 border border-brand-500/30 rounded-full px-4 py-1.5 text-brand-200 text-sm mb-6">
               <Star className="w-3.5 h-3.5 fill-brand-400 text-brand-400" />
-              Premium Quality Products
+              Cute. Trendy. For Every Generation & Gender.
             </div>
             <h1 className="font-display text-5xl lg:text-7xl font-bold leading-tight mb-6">
-              Discover <span className="text-brand-400">Extraordinary</span> Products
+              Beyond <span className="text-brand-400">Trends</span>
             </h1>
             <p className="text-neutral-300 text-lg leading-relaxed mb-8 max-w-lg">
-              Curated collections of premium products delivered right to your doorstep. Shop with confidence, style, and ease.
+              Shop playful, stylish, everyday finds made for every generation and gender.
             </p>
             <div className="flex flex-wrap gap-4">
               <Link href="/products" className="btn-primary btn-lg">
@@ -142,8 +142,8 @@ export default async function HomePage() {
       {/* CTA Banner */}
       <section className="py-16 bg-brand-500">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="font-display text-4xl font-bold text-white mb-4">Ready to Start Shopping?</h2>
-          <p className="text-brand-100 text-lg mb-8">Join thousands of happy customers today.</p>
+          <h2 className="font-display text-4xl font-bold text-white mb-4">Cute Finds, Trendy Picks</h2>
+          <p className="text-brand-100 text-lg mb-8">For every generation and gender.</p>
           <Link href="/auth?tab=signup" className="btn bg-white text-brand-600 hover:bg-brand-50 btn-lg font-bold shadow-lg">
             Create Free Account <ArrowRight className="w-5 h-5" />
           </Link>

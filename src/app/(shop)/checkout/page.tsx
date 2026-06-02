@@ -57,17 +57,26 @@ export default function CheckoutPage() {
 
     setLoading(true)
     try {
+      const orderItems = items.map((item) => ({
+        productId: item.productId,
+        name: item.name,
+        price: Number(item.price) || 0,
+        image: item.image || '',
+        quantity: Number(item.quantity) || 1,
+        sku: item.sku || '',
+      }))
+
       const id = await createOrder({
         orderNumber: generateOrderNumber(),
         userId: user.uid,
-        userEmail: user.email!,
-        userName: user.displayName || user.email!,
-        items,
+        userEmail: user.email || profile?.email || '',
+        userName: profile?.displayName || user.displayName || user.email || 'Customer',
+        items: orderItems,
         shippingAddress: {
           fullName: data.fullName,
           phone: data.phone,
           line1: data.line1,
-          line2: data.line2,
+          line2: data.line2 || '',
           city: data.city,
           state: data.state,
           pincode: data.pincode,
@@ -89,6 +98,7 @@ export default function CheckoutPage() {
       setStep('success')
       toast.success('Order placed successfully!')
     } catch (err) {
+      console.error('Order placement failed:', err)
       toast.error('Failed to place order. Please try again.')
     } finally {
       setLoading(false)

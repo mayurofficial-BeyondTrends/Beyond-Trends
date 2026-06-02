@@ -27,6 +27,22 @@ const matchesCategory = (product: Product, category: string) => {
   return productCategory === category || slugify(productCategory) === category
 }
 
+const stripUndefined = <T>(value: T): T => {
+  if (Array.isArray(value)) {
+    return value.map((item) => stripUndefined(item)) as T
+  }
+
+  if (value && typeof value === 'object' && !(value instanceof Date) && !(value instanceof Timestamp)) {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .filter(([, item]) => item !== undefined)
+        .map(([key, item]) => [key, stripUndefined(item)])
+    ) as T
+  }
+
+  return value
+}
+
 // ─── Products ────────────────────────────────────────────────────────────────
 
 export async function getProducts(opts: {
@@ -109,12 +125,19 @@ export async function deleteCategory(id: string) {
 // ─── Orders ──────────────────────────────────────────────────────────────────
 
 export async function getOrders(opts: { userId?: string; status?: string; lim?: number } = {}) {
-  const constraints: any[] = [orderBy('createdAt', 'desc')]
-  if (opts.userId) constraints.push(where('userId', '==', opts.userId))
-  if (opts.status) constraints.push(where('status', '==', opts.status))
-  if (opts.lim)    constraints.push(limit(opts.lim))
-  const snap = await getDocs(query(collection(db, 'orders'), ...constraints))
-  return snap.docs.map(d => fromDoc<Order>(d))
+  const col = collection(db, 'orders')
+  const snap = opts.userId
+    ? await getDocs(query(col, where('userId', '==', opts.userId)))
+    : opts.status
+      ? await getDocs(query(col, where('status', '==', opts.status)))
+      : await getDocs(col)
+
+  let rows = snap.docs.map(d => fromDoc<Order>(d))
+  if (opts.userId) rows = rows.filter((order) => order.userId === opts.userId)
+  if (opts.status) rows = rows.filter((order) => order.status === opts.status)
+
+  rows.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+  return opts.lim ? rows.slice(0, opts.lim) : rows
 }
 
 export async function getOrder(id: string) {
@@ -127,7 +150,7 @@ export async function createOrder(data: Omit<Order, 'id' | 'createdAt' | 'update
   // Customers can create orders, but product stock updates are admin-only in rules.
   // Keep checkout reliable by writing the order document only.
   const ref = await addDoc(collection(db, 'orders'), {
-    ...data,
+    ...stripUndefined(data),
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   })

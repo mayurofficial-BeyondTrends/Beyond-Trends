@@ -28,11 +28,9 @@ export default function AdminSidebar() {
       {/* Logo */}
       <div className="px-6 py-5 border-b border-neutral-800">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-center">
-            <span className="text-white font-display font-bold text-sm">S</span>
-          </div>
+          <img src="/favicon.png" alt="" className="w-8 h-8 rounded-lg object-cover" />
           <div>
-            <p className="font-display font-bold text-white text-sm">ShopLux</p>
+            <p className="font-display font-bold text-white text-sm">Beyond Trends</p>
             <p className="text-neutral-500 text-[10px]">Admin Panel</p>
           </div>
         </div>

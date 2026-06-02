@@ -17,8 +17,8 @@ export default function AdminSettingsPage() {
   const passwordForm = useForm<{ currentPassword: string; newPassword: string; confirmPassword: string }>()
   const storeForm = useForm({
     defaultValues: {
-      storeName: 'ShopLux',
-      storeEmail: 'support@shoplux.in',
+      storeName: 'Beyond Trends',
+      storeEmail: 'support@beyondtrends.in',
       storePhone: '+91 98765 43210',
       storeAddress: '123 Commerce Street, Mumbai, Maharashtra 400001',
       currency: 'INR',

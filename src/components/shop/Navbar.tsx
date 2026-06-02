@@ -46,13 +46,12 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 group">
-            <div className="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-center">
-              <span className="text-white font-display font-bold text-sm">S</span>
-            </div>
-            <span className="font-display font-bold text-xl text-neutral-900 group-hover:text-brand-500 transition-colors">
-              ShopLux
-            </span>
+          <Link href="/" className="flex items-center group" aria-label="Beyond Trends home">
+            <img
+              src="/Logo.png"
+              alt="Beyond Trends"
+              className="h-11 w-auto max-w-[180px] object-contain transition-opacity group-hover:opacity-85"
+            />
           </Link>
 
           {/* Desktop Nav */}
@@ -134,6 +133,9 @@ export default function Navbar() {
                         <p className="text-sm font-medium text-neutral-900 truncate">{user.displayName || user.email}</p>
                         <p className="text-xs text-neutral-500 truncate">{user.email}</p>
                       </div>
+                      <Link href="/profile" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50">
+                        <User className="w-4 h-4" /> Profile
+                      </Link>
                       <Link href="/orders" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50">
                         <Package className="w-4 h-4" /> My Orders
                       </Link>
