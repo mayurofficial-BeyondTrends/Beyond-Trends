@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Heart, Minus, Plus, Shield, ShoppingCart, Star, Truck } from 'lucide-react'
+import { ArrowLeft, Heart, Shield, ShoppingCart, Star, Truck } from 'lucide-react'
 import { getProduct, getReviews } from '@/lib/services'
 import { useCart } from '@/context/CartContext'
 import {
@@ -28,7 +28,6 @@ export default function ProductDetailPage() {
   const { addItem } = useCart()
   const [product, setProduct] = useState<Product | null>(null)
   const [loading, setLoading] = useState(true)
-  const [quantity, setQuantity] = useState(1)
   const [selectedImage, setSelectedImage] = useState(0)
   const [activeTab, setActiveTab] = useState<'details' | 'features' | 'reviews'>('details')
   const [reviews, setReviews] = useState<Review[]>([])
@@ -73,19 +72,35 @@ export default function ProductDetailPage() {
   const discount = comparePrice ? Math.round(((comparePrice - price) / comparePrice) * 100) : 0
 
   const handleAddToCart = () => {
-    addItem({ productId: product.id, name: title, price, image: images[0] || '', quantity, sku })
-    toast.success(`Added ${quantity} x ${title} to cart!`)
+    addItem({ productId: product.id, name: title, price, image: images[0] || '', quantity: 1, sku })
+    toast.success(`Added ${title} to cart!`)
   }
 
+  const handleBuyNow = () => {
+    addItem({ productId: product.id, name: title, price, image: images[0] || '', quantity: 1, sku })
+    router.push('/checkout')
+  }
+
+  const actionButtons = (
+    <>
+      <button onClick={handleAddToCart} disabled={stock <= 0} className="btn-primary flex-1 btn-lg min-h-12">
+        <ShoppingCart className="w-5 h-5" /> Add to Cart
+      </button>
+      <button onClick={handleBuyNow} disabled={stock <= 0} className="btn-primary flex-1 btn-lg min-h-12">
+        Buy Now
+      </button>
+    </>
+  )
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      <button onClick={() => router.back()} className="flex items-center gap-2 text-sm text-neutral-500 hover:text-neutral-900 mb-8 transition-colors">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10 pb-28 sm:pb-10">
+      <button onClick={() => router.back()} className="mb-5 flex items-center gap-2 text-sm text-neutral-500 transition-colors hover:text-neutral-900 sm:mb-8">
         <ArrowLeft className="w-4 h-4" /> Back to products
       </button>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-        <div>
-          <div className="aspect-square rounded-2xl overflow-hidden bg-neutral-100 mb-4">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-12">
+        <div className="space-y-3 sm:space-y-4">
+          <div className="aspect-[4/4.5] sm:aspect-square overflow-hidden rounded-2xl bg-neutral-100">
             {images[selectedImage] ? (
               <img src={images[selectedImage]} alt={product['Image Alt Text'] || title} className="w-full h-full object-cover" />
             ) : (
@@ -95,12 +110,12 @@ export default function ProductDetailPage() {
             )}
           </div>
           {images.length > 1 && (
-            <div className="flex gap-3 overflow-x-auto pb-1">
+            <div className="flex gap-2 overflow-x-auto pb-1 sm:gap-3">
               {images.map((img, index) => (
                 <button
                   key={img}
                   onClick={() => setSelectedImage(index)}
-                  className={`w-20 h-20 rounded-xl overflow-hidden shrink-0 border-2 transition-all ${
+                  className={`h-16 w-16 shrink-0 overflow-hidden rounded-xl border-2 transition-all sm:h-20 sm:w-20 ${
                     selectedImage === index ? 'border-brand-500' : 'border-transparent hover:border-neutral-300'
                   }`}
                 >
@@ -111,11 +126,11 @@ export default function ProductDetailPage() {
           )}
         </div>
 
-        <div>
-          <p className="text-brand-500 font-medium text-sm uppercase tracking-wider mb-2">{category}</p>
-          <h1 className="font-display text-3xl lg:text-4xl font-bold text-neutral-900 mb-4">{title}</h1>
+        <div className="min-w-0">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-brand-500 sm:text-sm">{category}</p>
+          <h1 className="mb-3 font-display text-[1.75rem] font-bold leading-tight text-neutral-900 sm:text-3xl lg:text-4xl">{title}</h1>
 
-          <div className="flex items-center gap-2 mb-6">
+          <div className="mb-4 flex flex-wrap items-center gap-2 sm:mb-6">
             <div className="flex items-center gap-0.5">
               {[1, 2, 3, 4, 5].map((index) => (
                 <Star key={index} className={`w-4 h-4 ${index <= 4 ? 'fill-yellow-400 text-yellow-400' : 'text-neutral-200'}`} />
@@ -124,57 +139,40 @@ export default function ProductDetailPage() {
             <span className="text-sm text-neutral-500">4.0 (24 reviews)</span>
           </div>
 
-          <div className="flex items-baseline gap-3 mb-6">
-            <span className="font-display text-3xl font-bold text-neutral-900">{formatCurrency(price)}</span>
+          <div className="mb-5 flex flex-wrap items-center gap-3 sm:mb-6">
+            <span className="font-display text-3xl font-bold text-neutral-900 sm:text-4xl">{formatCurrency(price)}</span>
             {comparePrice && (
               <>
-                <span className="text-lg text-neutral-400 line-through">{formatCurrency(comparePrice)}</span>
+                <span className="text-base text-neutral-400 line-through sm:text-lg">{formatCurrency(comparePrice)}</span>
                 <span className="badge bg-green-100 text-green-700">{discount}% off</span>
               </>
             )}
           </div>
 
-          <p className="text-neutral-600 leading-relaxed mb-8 whitespace-pre-line">{description}</p>
+          <p className="mb-6 whitespace-pre-line text-sm leading-7 text-neutral-600 sm:mb-8 sm:text-base">{description}</p>
 
-          <div className="mb-6">
+          <div className="mb-5 rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3 sm:mb-6">
             {stock > 0 ? (
-              <p className="text-sm text-green-600 font-medium">In Stock ({stock} available)</p>
+              <p className="text-sm font-medium text-green-600">In Stock ({stock} available)</p>
             ) : (
-              <p className="text-sm text-red-500 font-medium">Out of Stock</p>
+              <p className="text-sm font-medium text-red-500">Out of Stock</p>
             )}
           </div>
 
-          {stock > 0 && (
-            <div className="flex items-center gap-4 mb-8">
-              <span className="label mb-0">Quantity</span>
-              <div className="flex items-center gap-1 border border-neutral-200 rounded-lg overflow-hidden">
-                <button onClick={() => setQuantity((value) => Math.max(1, value - 1))} className="p-2.5 hover:bg-neutral-50 transition-colors">
-                  <Minus className="w-4 h-4" />
-                </button>
-                <span className="w-10 text-center font-medium text-sm">{quantity}</span>
-                <button onClick={() => setQuantity((value) => Math.min(stock, value + 1))} className="p-2.5 hover:bg-neutral-50 transition-colors">
-                  <Plus className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          )}
-
-          <div className="flex gap-3 mb-8">
-            <button onClick={handleAddToCart} disabled={stock <= 0} className="btn-primary flex-1 btn-lg">
-              <ShoppingCart className="w-5 h-5" /> Add to Cart
-            </button>
-            <button className="btn-outline px-4">
+          <div className="mb-8 hidden items-center gap-3 sm:flex">
+            {actionButtons}
+            <button className="btn-outline px-4 min-h-12">
               <Heart className="w-5 h-5" />
             </button>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 py-6 border-t border-neutral-100">
+          <div className="grid grid-cols-1 gap-3 border-t border-neutral-100 py-5 sm:grid-cols-2 sm:gap-4 sm:py-6">
             {[
               { icon: Truck, text: 'Free shipping on INR 999+' },
               { icon: Shield, text: '100% secure payment' },
             ].map(({ icon: Icon, text }) => (
-              <div key={text} className="flex items-center gap-3">
-                <div className="w-9 h-9 bg-neutral-100 rounded-lg flex items-center justify-center shrink-0">
+              <div key={text} className="flex items-center gap-3 rounded-2xl border border-neutral-100 bg-white px-3 py-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-neutral-100">
                   <Icon className="w-4 h-4 text-neutral-600" />
                 </div>
                 <p className="text-xs text-neutral-600">{text}</p>
@@ -183,7 +181,7 @@ export default function ProductDetailPage() {
           </div>
 
           {tags.length > 0 && (
-            <div className="flex flex-wrap gap-2 pt-4 border-t border-neutral-100">
+            <div className="flex flex-wrap gap-2 border-t border-neutral-100 pt-4">
               {tags.map((tag) => (
                 <span key={tag} className="badge bg-neutral-100 text-neutral-600">{tag}</span>
               ))}
@@ -192,8 +190,8 @@ export default function ProductDetailPage() {
         </div>
       </div>
 
-      <div className="mt-12">
-        <div className="flex flex-wrap gap-2 border-b border-neutral-200 pb-3">
+      <div className="mt-10 sm:mt-12">
+        <div className="-mx-1 flex gap-2 overflow-x-auto border-b border-neutral-200 pb-3 sm:mx-0 sm:flex-wrap">
           {[
             { key: 'details', label: 'Product Detail' },
             { key: 'features', label: 'Additional Information' },
@@ -202,7 +200,7 @@ export default function ProductDetailPage() {
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key as 'details' | 'features' | 'reviews')}
-              className={`rounded-full px-5 py-2 text-sm font-medium transition-colors ${
+              className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-colors sm:px-5 ${
                 activeTab === tab.key
                   ? 'bg-neutral-900 text-white'
                   : 'border border-neutral-200 text-neutral-700 hover:bg-neutral-50'
@@ -213,12 +211,12 @@ export default function ProductDetailPage() {
           ))}
         </div>
 
-        <div className="mt-5 rounded-2xl border border-neutral-200 bg-white p-6">
+        <div className="mt-5 rounded-2xl border border-neutral-200 bg-white p-4 sm:p-6">
           {activeTab === 'details' && (
             <div className="space-y-4">
-              <h3 className="text-2xl font-display font-bold text-neutral-900">Product Detail</h3>
+              <h3 className="font-display text-xl font-bold text-neutral-900 sm:text-2xl">Product Detail</h3>
               <div
-                className="prose prose-neutral max-w-none text-neutral-700"
+                className="prose prose-sm sm:prose prose-neutral max-w-none text-neutral-700"
                 dangerouslySetInnerHTML={{ __html: descriptionHtml }}
               />
             </div>
@@ -226,7 +224,7 @@ export default function ProductDetailPage() {
 
           {activeTab === 'features' && (
             <div className="space-y-4">
-              <h3 className="text-2xl font-display font-bold text-neutral-900">Additional Information</h3>
+              <h3 className="font-display text-xl font-bold text-neutral-900 sm:text-2xl">Additional Information</h3>
               <ul className="space-y-2 text-neutral-700">
                 <li>SKU: {sku}</li>
                 <li>Vendor: {product.Vendor || 'N/A'}</li>
@@ -243,7 +241,7 @@ export default function ProductDetailPage() {
 
           {activeTab === 'reviews' && (
             <div className="space-y-4">
-              <h3 className="text-2xl font-display font-bold text-neutral-900">Reviews</h3>
+              <h3 className="font-display text-xl font-bold text-neutral-900 sm:text-2xl">Reviews</h3>
               {reviews.length === 0 ? (
                 <p className="text-neutral-500">No reviews yet.</p>
               ) : (
@@ -269,6 +267,15 @@ export default function ProductDetailPage() {
               )}
             </div>
           )}
+        </div>
+      </div>
+
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-neutral-200 bg-white/95 p-4 backdrop-blur sm:hidden">
+        <div className="mx-auto flex max-w-7xl items-center gap-3">
+          <button className="btn-outline h-12 w-12 shrink-0 p-0">
+            <Heart className="w-5 h-5" />
+          </button>
+          {actionButtons}
         </div>
       </div>
     </div>

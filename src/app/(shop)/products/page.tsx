@@ -72,7 +72,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Sea
               <p className="mt-1 text-sm text-neutral-400">Try adjusting your filters</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-6 xl:grid-cols-3">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
               {filtered.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}

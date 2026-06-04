@@ -1,5 +1,6 @@
+import Image from 'next/image'
 import Link from 'next/link'
-import { ArrowRight, Shield, Truck, RefreshCw, Headphones, Star } from 'lucide-react'
+import { ArrowRight, Shield, Truck, RefreshCw, Headphones } from 'lucide-react'
 import { getProducts, getCategories } from '@/lib/services'
 import ProductCard from '@/components/shop/ProductCard'
 
@@ -18,41 +19,17 @@ export default async function HomePage() {
   return (
     <div>
       {/* Hero */}
-      <section className="relative bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-800 text-white overflow-hidden">
-        <div className="absolute inset-0 opacity-10"
-          style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")" }}
-        />
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 lg:py-36">
-          <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 bg-brand-500/20 border border-brand-500/30 rounded-full px-4 py-1.5 text-brand-200 text-sm mb-6">
-              <Star className="w-3.5 h-3.5 fill-brand-400 text-brand-400" />
-              Cute. Trendy. For Every Generation & Gender.
-            </div>
-            <h1 className="font-display text-5xl lg:text-7xl font-bold leading-tight mb-6">
-              Beyond <span className="text-brand-400">Trends</span>
-            </h1>
-            <p className="text-neutral-300 text-lg leading-relaxed mb-8 max-w-lg">
-              Shop playful, stylish, everyday finds made for every generation and gender.
-            </p>
-            <div className="flex flex-wrap gap-4">
-              <Link href="/products" className="btn-primary btn-lg">
-                Shop Now <ArrowRight className="w-5 h-5" />
-              </Link>
-              <Link href="/products?featured=true" className="btn border border-white/20 text-white hover:bg-white/10 btn-lg">
-                View Featured
-              </Link>
-            </div>
-            <div className="flex items-center gap-6 mt-10 text-sm text-neutral-400">
-              <div className="flex items-center gap-2">
-                <Shield className="w-4 h-4 text-brand-400" /> Secure Payments
-              </div>
-              <div className="flex items-center gap-2">
-                <Truck className="w-4 h-4 text-brand-400" /> Free Shipping
-              </div>
-              <div className="flex items-center gap-2">
-                <RefreshCw className="w-4 h-4 text-brand-400" /> Easy Returns
-              </div>
-            </div>
+      <section className="bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 lg:pt-8">
+          <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl">
+            <Image
+              src="/banner.png"
+              alt="Beyond Trends banner"
+              width={1852346}
+              height={1852346}
+              priority
+              className="h-auto w-full object-cover"
+            />
           </div>
         </div>
       </section>
@@ -102,7 +79,7 @@ export default async function HomePage() {
               <p className="text-neutral-400 text-lg">No products yet. Check back soon!</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
               {allProducts.map(product => (
                 <ProductCard key={product.id} product={product} />
               ))}
