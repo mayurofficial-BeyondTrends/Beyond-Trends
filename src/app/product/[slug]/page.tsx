@@ -1,19 +1,14 @@
-'use client'
-
-import { useEffect, useMemo, useState } from 'react'
-import { useParams } from 'next/navigation'
+import { notFound } from 'next/navigation'
 import ProductBreadcrumb from '@/components/product/ProductBreadcrumb'
 import ProductDescription from '@/components/product/ProductDescription'
 import ProductFeatures from '@/components/product/ProductFeatures'
 import ProductGallery from '@/components/product/ProductGallery'
 import ProductInfo from '@/components/product/ProductInfo'
-import ProductRating from '@/components/product/ProductRating'
 import ProductReviews from '@/components/product/ProductReviews'
 import ProductShipping from '@/components/product/ProductShipping'
 import ProductSpecifications from '@/components/product/ProductSpecifications'
 import RelatedProducts from '@/components/product/RelatedProducts'
-import ProductTabs from '@/components/product/ProductTabs'
-import { getProduct, getProducts, getReviews } from '@/lib/services'
+import { getProducts, getReviews } from '@/lib/services'
 import {
   formatDate,
   getProductCategory,
@@ -35,13 +30,19 @@ import type {
   ProductFeatureItem,
   ProductReview,
   ProductShippingItem,
-  ProductTabKey,
+  ProductTabItem,
   ProductVariantGroup,
 } from '@/types/product'
+import ProductTabsClient from './tabs-client'
+
+type ProductPageProps = {
+  params: Promise<{ slug: string }>
+}
 
 const DEFAULT_FEATURES: ProductFeatureItem[] = [
   { title: 'Free Shipping', description: 'Fast doorstep delivery on eligible orders across India.' },
   { title: 'Easy Returns', description: 'Simple return support for eligible items and orders.' },
+  { title: 'Secure Checkout', description: 'Protected payment flow with trusted checkout handling.' },
   { title: 'Cash On Delivery', description: 'Pay when your order arrives on supported locations.' },
 ]
 
@@ -83,8 +84,6 @@ function uniqueStrings(values: Array<string | undefined | null>) {
 }
 
 function buildVariants(product: CatalogProduct): ProductVariantGroup[] {
-  const inStock = parseProductNumber(product['Variant Inventory Qty'] ?? product.stock, 0) > 0
-
   return getOptionPairs(product)
     .filter((option) => option.name && isMeaningfulOptionValue(option.value))
     .map((option) => ({
@@ -92,7 +91,7 @@ function buildVariants(product: CatalogProduct): ProductVariantGroup[] {
       values: uniqueStrings([option.value]).map((value) => ({
         label: value,
         value,
-        available: inStock,
+        available: parseProductNumber(product['Variant Inventory Qty'] ?? product.stock, 0) > 0,
       })),
     }))
     .filter((group) => group.values.length > 0)
@@ -152,9 +151,12 @@ function normalizeReviews(reviews: CatalogReview[]): ProductReview[] {
 function normalizeProduct(product: CatalogProduct, reviews: ProductReview[]): Product {
   const title = getProductTitle(product)
   const category = getProductCategory(product)
+  const images = uniqueStrings(getProductImages(product))
+  const price = getProductPrice(product)
+  const comparePrice = getProductComparePrice(product)
+  const stock = Math.max(0, parseProductNumber(product['Variant Inventory Qty'] ?? product.stock, 0))
   const variants = buildVariants(product)
   const colors = inferColors(product, variants)
-  const stock = Math.max(0, parseProductNumber(product['Variant Inventory Qty'] ?? product.stock, 0))
   const averageRating = reviews.length
     ? reviews.reduce((total, review) => total + review.rating, 0) / reviews.length
     : 0
@@ -164,9 +166,9 @@ function normalizeProduct(product: CatalogProduct, reviews: ProductReview[]): Pr
     slug: product.Handle ? slugify(product.Handle) : slugify(title),
     title,
     description: getProductDescription(product),
-    price: getProductPrice(product),
-    comparePrice: getProductComparePrice(product),
-    images: uniqueStrings(getProductImages(product)),
+    price,
+    comparePrice,
+    images,
     category,
     colors: colors.length > 0 ? colors : undefined,
     rating: averageRating,
@@ -176,170 +178,72 @@ function normalizeProduct(product: CatalogProduct, reviews: ProductReview[]): Pr
   }
 }
 
-export default function ProductDetailPage() {
-  const { id } = useParams<{ id: string }>()
-  const [product, setProduct] = useState<CatalogProduct | null>(null)
-  const [relatedCatalogProducts, setRelatedCatalogProducts] = useState<CatalogProduct[]>([])
-  const [reviews, setReviews] = useState<ProductReview[]>([])
-  const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<ProductTabKey>('description')
+function mapRelatedProducts(products: CatalogProduct[], currentProductId: string) {
+  return products.filter((product) => product.id !== currentProductId)
+}
 
-  useEffect(() => {
-    let ignore = false
+export default async function ProductDetailsPage({ params }: ProductPageProps) {
+  const { slug } = await params
+  const products = await getProducts({ status: 'active' }).catch(() => [])
 
-    async function loadProductPage() {
-      setLoading(true)
+  const currentProduct = products.find((item) => {
+    const titleSlug = slugify(getProductTitle(item))
+    const handleSlug = item.Handle ? slugify(item.Handle) : ''
+    return item.id === slug || titleSlug === slug || handleSlug === slug
+  })
 
-      try {
-        const item = await getProduct(id)
+  if (!currentProduct) notFound()
 
-        if (!item) {
-          if (!ignore) {
-            setProduct(null)
-            setReviews([])
-            setRelatedCatalogProducts([])
-            setLoading(false)
-          }
-          return
-        }
-
-        const [rawReviews, products] = await Promise.all([
-          getReviews(item.id).catch(() => []),
-          getProducts({ status: 'active' }).catch(() => []),
-        ])
-
-        if (ignore) return
-
-        const category = getProductCategory(item)
-
-        setProduct(item)
-        setReviews(normalizeReviews(rawReviews))
-        setRelatedCatalogProducts(
-          products
-            .filter((candidate) => candidate.id !== item.id && getProductCategory(candidate) === category)
-            .slice(0, 5)
-        )
-      } finally {
-        if (!ignore) setLoading(false)
-      }
-    }
-
-    void loadProductPage()
-
-    return () => {
-      ignore = true
-    }
-  }, [id])
-
-  const normalizedProduct = useMemo(
-    () => (product ? normalizeProduct(product, reviews) : null),
-    [product, reviews]
+  const rawReviews = await getReviews(currentProduct.id).catch(() => [])
+  const reviews = normalizeReviews(rawReviews)
+  const product = normalizeProduct(currentProduct, reviews)
+  const descriptionHtml = getProductDescriptionHtml(currentProduct)
+  const variants = buildVariants(currentProduct)
+  const relatedProducts = mapRelatedProducts(
+    products.filter((item) => getProductCategory(item) === product.category),
+    currentProduct.id
   )
+    .slice(0, 4)
+    .map((item) => normalizeProduct(item, []))
 
-  const variants = useMemo(
-    () => (product ? buildVariants(product) : []),
-    [product]
-  )
-
-  const descriptionHtml = useMemo(
-    () => (product ? getProductDescriptionHtml(product) : ''),
-    [product]
-  )
-
-  const relatedProducts = useMemo(
-    () => relatedCatalogProducts.map((item) => normalizeProduct(item, [])),
-    [relatedCatalogProducts]
-  )
-
-  const tabs = useMemo(
-    () => [
-      { key: 'description' as ProductTabKey, label: 'Description' },
-      { key: 'specifications' as ProductTabKey, label: 'Specifications' },
-      { key: 'shipping' as ProductTabKey, label: 'Shipping & Returns' },
-      { key: 'reviews' as ProductTabKey, label: `Reviews (${reviews.length})` },
-    ],
-    [reviews.length]
-  )
-
-  if (loading) {
-    return (
-      <div className="shell-container py-16 sm:py-20">
-        <div className="grid gap-8 lg:grid-cols-[minmax(0,0.48fr)_minmax(0,0.52fr)]">
-          <div className="h-[420px] animate-pulse rounded-[2rem] bg-neutral-100" />
-          <div className="h-[420px] animate-pulse rounded-[2rem] bg-neutral-100" />
-        </div>
-      </div>
-    )
-  }
-
-  if (!product || !normalizedProduct) {
-    return (
-      <div className="shell-container py-20 text-center">
-        <p className="text-neutral-500">Product not found.</p>
-      </div>
-    )
-  }
+  const tabs: ProductTabItem[] = [
+    { key: 'description', label: 'Description' },
+    { key: 'specifications', label: 'Specifications' },
+    { key: 'shipping', label: 'Shipping & Returns' },
+    { key: 'reviews', label: `Reviews (${product.reviewCount})` },
+  ]
 
   return (
     <div className="shell-container py-6 sm:py-8 lg:py-10">
-      <ProductBreadcrumb category={normalizedProduct.category} title={normalizedProduct.title} />
+      <ProductBreadcrumb category={product.category} title={product.title} />
 
-      <div className="mb-4 lg:hidden">
-        <h1 className="font-sans text-[2rem] font-semibold leading-tight text-[#111111]">
-          {normalizedProduct.title}
-        </h1>
-        <ProductRating
-          rating={normalizedProduct.rating}
-          reviewCount={normalizedProduct.reviewCount || reviews.length}
-          className="mt-2"
-        />
-      </div>
-
-      <section>
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,0.46fr)_minmax(0,0.54fr)] lg:items-start lg:gap-8">
-          <ProductGallery images={normalizedProduct.images} title={normalizedProduct.title} />
+      <section className="rounded-[2.25rem] border border-neutral-200 bg-[#fffdfb] p-4 shadow-[0_18px_50px_rgba(15,23,42,0.05)] sm:p-6 lg:p-7">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,0.48fr)_minmax(0,0.52fr)] lg:items-start lg:gap-8">
+          <ProductGallery images={product.images} title={product.title} />
           <ProductInfo
-            product={normalizedProduct}
+            product={product}
             reviews={reviews}
             variants={variants}
-            featureHighlights={[]}
+            featureHighlights={DEFAULT_FEATURES.slice(0, 2)}
           />
         </div>
 
-        <div className="mt-6">
+        <div className="mt-8 border-t border-neutral-200 pt-6">
           <ProductFeatures items={DEFAULT_FEATURES} />
         </div>
       </section>
 
-      <div className="mt-10 sm:mt-12">
-        <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white lg:grid lg:grid-cols-[180px_minmax(0,1fr)]">
-          <div className="border-b border-neutral-200 lg:border-b-0 lg:border-r lg:border-neutral-200">
-            <ProductTabs
-              tabs={tabs}
-              activeTab={activeTab}
-              onChange={setActiveTab}
-              orientation="sidebar"
-            />
-          </div>
+      <ProductTabsClient
+        tabs={tabs}
+        description={<ProductDescription html={descriptionHtml || product.description} />}
+        specifications={<ProductSpecifications items={product.specifications} />}
+        shipping={<ProductShipping items={DEFAULT_SHIPPING_ITEMS} />}
+        reviews={<ProductReviews reviews={reviews} />}
+      />
 
-          <div className="p-6 lg:p-8">
-            {activeTab === 'description' && (
-              <ProductDescription html={descriptionHtml || normalizedProduct.description} />
-            )}
-            {activeTab === 'specifications' && (
-              <ProductSpecifications items={normalizedProduct.specifications} />
-            )}
-            {activeTab === 'shipping' && (
-              <ProductShipping items={DEFAULT_SHIPPING_ITEMS} />
-            )}
-            {activeTab === 'reviews' && (
-              <ProductReviews reviews={reviews} />
-            )}
-          </div>
-        </div>
+      <div className="rounded-[2rem] border border-neutral-200 bg-white p-4 shadow-[0_16px_40px_rgba(15,23,42,0.05)] sm:p-6">
+        <RelatedProducts products={relatedProducts} />
       </div>
-
-      <RelatedProducts products={relatedProducts} />
     </div>
   )
 }

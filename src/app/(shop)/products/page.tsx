@@ -22,6 +22,13 @@ export default async function ProductsPage({ searchParams }: { searchParams: Sea
     getCategories().catch(() => []),
   ])
 
+  const categoryHighlights = [
+    'Random trendy picks',
+    'Notes and paper essentials',
+    'Cute everyday finds',
+    'Customizable products',
+  ]
+
   let filtered = products
 
   if (searchParams.q) {
@@ -52,6 +59,21 @@ export default async function ProductsPage({ searchParams }: { searchParams: Sea
         </aside>
 
         <div className="flex-1">
+          <div className="mb-6 rounded-2xl border border-neutral-200 bg-neutral-50 p-5">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-500">Our Collection</p>
+            <h2 className="mt-2 font-display text-2xl font-bold text-neutral-900">Find products that match your vibe</h2>
+            <p className="mt-2 text-sm leading-6 text-neutral-600">
+              Explore our mix of random trendy products, note essentials, cute designs, and customizable favorites.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {categoryHighlights.map((item) => (
+                <span key={item} className="rounded-full bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 ring-1 ring-neutral-200">
+                  {item}
+                </span>
+              ))}
+            </div>
+          </div>
+
           <div className="mb-6 flex items-center justify-between">
             <div>
               <h1 className="font-display text-2xl font-bold text-neutral-900">
